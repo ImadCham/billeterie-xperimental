@@ -1,0 +1,25 @@
+# Dépendances Node.js
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Fichiers d'environnement (Sécurité : Ne JAMAIS push ce fichier sur GitHub)
+.env
+backend/.env
+
+# Fichiers système de Windows / macOS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Dossiers temporaires générés par l'application
+tickets/
+
+# Fichiers de log
+npm-debug.log
+yarn-error.log
+*.log
+
+# Dossiers de développement divers
+.vscode/
+.idea/

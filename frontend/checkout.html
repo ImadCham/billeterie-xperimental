@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Paiement / Checkout - Xperimental Vol.2</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- Stripe.js -->
+    <script src="https://js.stripe.com/v3/"></script>
+</head>
+
+<body class="checkout-body">
+
+    <div class="checkout-container">
+        <!-- Left Side: Payment Form -->
+        <div class="checkout-form-section">
+            <h1 class="checkout-title">Paiement / Payment</h1>
+            <p class="checkout-subtitle">Veuillez entrer vos informations de paiement sécurisées ci-dessous.</p>
+
+            <form id="payment-form">
+                <!-- Ticket 1 (main buyer) -->
+                <div class="form-group">
+                    <label for="email">Billet 1 — Adresse Courriel / Email</label>
+                    <input type="email" id="email" class="glass-input" placeholder="nom@exemple.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="name">Billet 1 — Nom Complet / Full Name</label>
+                    <input type="text" id="name" class="glass-input" placeholder="John Doe" required>
+                </div>
+
+                <!-- Extra attendee forms injected here when qty > 1 -->
+                <div id="extra-attendees"></div>
+
+                <div class="stripe-container-real">
+                    <p class="stripe-label">Carte de Crédit / Credit Card</p>
+                    <div id="payment-element">
+                        <div
+                            style="padding: 20px; text-align: center; color: #6b7280; font-size: 14px; background: #f9fafb; border-radius: 8px; border: 1px dashed #d1d5db;">
+                            Chargement du système de paiement sécurisé...
+                        </div>
+                    </div>
+                </div>
+
+                <div id="payment-message" class="hidden"></div>
+
+                <button type="submit" class="pay-btn" id="submit" style="margin-bottom: 16px;">
+                    <span id="button-text">Payer <span id="btn-total">$0.00</span></span>
+                    <span id="spinner" class="hidden" style="display: none;">Traitement...</span>
+                </button>
+
+                <div style="text-align: center;">
+                    <button type="button" class="back-link-inline"
+                        onclick="window.location.href='index.html?view=tickets'">← Retour / Back</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Right Side: Order Summary -->
+        <div class="checkout-summary-section">
+            <div class="checkout-summary-sticky">
+                <div class="summary-card">
+                    <h2>Résumé de la commande / Order Summary</h2>
+                <div class="summary-event">
+                    <img src="assets/poster.jpeg" alt="Xperimental Vol.2" class="summary-img"
+                        onerror="this.src='https://placehold.co/100x100?text=Event'">
+                    <div class="summary-event-info">
+                        <h3>Xperimental Vol.2</h3>
+                        <p>356 AV MONT-ROYAL E</p>
+                    </div>
+                </div>
+
+                <!-- Dynamic items will be injected here -->
+
+                <div class="summary-line fees">
+                    <span>Frais de service / Service Fee</span>
+                    <span id="summary-frais">$0.00</span>
+                </div>
+
+                <div class="summary-line fees">
+                    <span>TPS (5%)</span>
+                    <span id="summary-tps">$0.00</span>
+                </div>
+
+                <div class="summary-line fees">
+                    <span>TVQ (9.975%)</span>
+                    <span id="summary-tvq">$0.00</span>
+                </div>
+
+                <div class="summary-total">
+                    <span>Total</span>
+                    <span id="summary-total">$10.00</span>
+                </div>
+            </div>
+
+            <div class="secure-badge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                Paiement 100% sécurisé géré par Stripe
+            </div>
+          </div>
+        </div>
+    </div>
+
+    <script>
+// Bilingual dictionary for checkout
+const dict = {
+    fr: {
+        title: "Paiement / Payment",
+        subtitle: "Veuillez entrer vos informations de paiement sécurisées ci-dessous.",
+        lbl_email: "Billet {n} — Adresse Courriel / Email",
+        lbl_name: "Billet {n} — Nom Complet / Full Name",
+        lbl_card: "Carte de Crédit / Credit Card",
+        btn_pay: "Payer",
+        btn_back: "← Retour / Back",
+        loading_stripe: "Chargement du système de paiement sécurisé...",
+        msg_fill_all: "Veuillez remplir toutes les informations.",
+        msg_no_backend: "Le système de paiement n'est pas actif (Backend hors ligne).",
+        msg_sold_out: "Désolé, l'événement est COMPLET.",
+        summary_title: "Résumé de la commande / Order Summary",
+        summary_fees: "Frais de service / Service Fee",
+        secure_text: "Paiement 100% sécurisé géré par Stripe",
+        early: "Early Bird",
+        regular: "Admission Générale (Regular)"
+    },
+    en: {
+        title: "Payment",
+        subtitle: "Please enter your secure payment information below.",
+        lbl_email: "Ticket {n} — Email Address",
+        lbl_name: "Ticket {n} — Full Name",
+        lbl_card: "Credit Card",
+        btn_pay: "Pay",
+        btn_back: "← Back",
+        loading_stripe: "Loading secure payment system...",
+        msg_fill_all: "Please fill in all information.",
+        msg_no_backend: "Payment system inactive (Backend offline).",
+        msg_sold_out: "Sorry, event is SOLD OUT.",
+        summary_title: "Order Summary",
+        summary_fees: "Service Fee",
+        secure_text: "100% Secure payment powered by Stripe",
+        early: "Early Bird",
+        regular: "General Admission (Regular)"
+    }
+};
+
+const urlParams = new URLSearchParams(window.location.search);
+const lang = urlParams.get('lang') || 'fr';
+const d = dict[lang] || dict.fr;
+
+const qty = parseInt(urlParams.get('qty')) || 1;
+const itemsParam = urlParams.get('items') || ""; // "early:2,regular:1"
+const itemPairs = itemsParam.split(',').filter(p => p.includes(':'));
+
+let subtotal = 0;
+let summaryHtml = "";
+
+itemPairs.forEach(pair => {
+    const [tier, q] = pair.split(':');
+    const price = tier === 'early' ? 10.00 : 15.00;
+    const count = parseInt(q);
+    subtotal += count * price;
+    
+    summaryHtml += `
+        <div class="summary-line">
+            <span>${count}x ${d[tier] || tier}</span>
+            <span>$${(count * price).toFixed(2)}</span>
+        </div>
+    `;
+});
+
+// If no items in URL but qty exists (backward compatibility)
+if (subtotal === 0 && qty > 0) {
+    const price = 10.00; // default
+    subtotal = qty * price;
+    summaryHtml = `
+        <div class="summary-line">
+            <span>${qty}x ${d.early}</span>
+            <span>$${subtotal.toFixed(2)}</span>
+        </div>
+    `;
+}
+
+const fraisService = qty * 1.00;
+const montantTaxable = subtotal + fraisService;
+const tps = montantTaxable * 0.05;
+const tvq = montantTaxable * 0.09975;
+const total = montantTaxable + tps + tvq;
+
+// Translate Static Elements
+document.querySelector('.checkout-title').innerText = d.title;
+document.querySelector('.checkout-subtitle').innerText = d.subtitle;
+document.getElementById('button-text').innerHTML = `${d.btn_pay} <span id="btn-total">$${total.toFixed(2)}</span>`;
+document.querySelector('.back-link-inline').innerText = d.btn_back;
+document.querySelector('.summary-card h2').innerText = d.summary_title;
+document.getElementById('payment-element').querySelector('div').innerText = d.loading_stripe;
+document.querySelector('.secure-badge').innerHTML = `
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+    </svg>
+    ${d.secure_text}
+`;
+
+// Dynamic Items List
+const itemsContainer = document.createElement('div');
+itemsContainer.innerHTML = summaryHtml;
+document.querySelector('.summary-event').after(itemsContainer);
+
+// Taxes & Totals
+document.getElementById('summary-frais').previousElementSibling.innerText = d.summary_fees;
+document.getElementById('summary-frais').innerText = `$${fraisService.toFixed(2)}`;
+document.getElementById('summary-tps').innerText = `$${tps.toFixed(2)}`;
+document.getElementById('summary-tvq').innerText = `$${tvq.toFixed(2)}`;
+document.getElementById('summary-total').innerText = `$${total.toFixed(2)}`;
+
+// Attendees Forms
+function buildExtraAttendeeForms() {
+    // Ticket 1
+    document.querySelector('label[for="email"]').innerText = d.lbl_email.replace('{n}', '1');
+    document.querySelector('label[for="name"]').innerText = d.lbl_name.replace('{n}', '1');
+    
+    var container = document.getElementById('extra-attendees');
+    container.innerHTML = '';
+    for (var i = 2; i <= qty; i++) {
+        var div = document.createElement('div');
+        div.style.cssText = 'border-top: 1px dashed #e5e7eb; margin-top: 20px; padding-top: 16px;';
+        div.innerHTML = 
+            '<div class="form-group">' +
+                '<label for="email-' + i + '">' + d.lbl_email.replace('{n}', i) + '</label>' +
+                '<input type="email" id="email-' + i + '" class="glass-input" placeholder="nom@exemple.com" required>' +
+            '</div>' +
+            '<div class="form-group">' +
+                '<label for="name-' + i + '">' + d.lbl_name.replace('{n}', i) + '</label>' +
+                '<input type="text" id="name-' + i + '" class="glass-input" placeholder="Prénom Nom" required>' +
+            '</div>';
+        container.appendChild(div);
+    }
+}
+buildExtraAttendeeForms();
+
+// -------- STRIPE INTEGRATION --------
+let stripe;
+let elements;
+let globalTier = "Besoin-de-tier"; // fallback
+let globalTicketId = null;
+
+async function initialize() {
+    try {
+        const backendUrl = window.location.origin + "/create-payment-intent";
+
+        // Build items for backend
+        const itemsToPost = itemPairs.map(p => {
+            const [id, q] = p.split(':');
+            return { id, qty: parseInt(q) };
+        });
+
+        const response = await fetch(backendUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ items: itemsToPost }),
+        });
+
+        const backendResponse = await response.json();
+        if (!response.ok) {
+            throw new Error(backendResponse.error || "Erreur serveur");
+        }
+
+        const { clientSecret, publishableKey, ticketId } = backendResponse;
+        globalTicketId = ticketId;
+        globalTier = backendResponse.ticketTier || "Admission";
+
+        stripe = Stripe(publishableKey);
+
+        const appearance = {
+            theme: 'stripe',
+            variables: {
+                colorPrimary: '#000000',
+                colorBackground: '#ffffff',
+                colorText: '#111827',
+                colorDanger: '#df1b41',
+                fontFamily: 'Inter, system-ui, sans-serif',
+                spacingUnit: '4px',
+                borderRadius: '8px',
+            }
+        };
+
+        elements = stripe.elements({ appearance, clientSecret });
+        const paymentElement = elements.create("payment", { 
+            layout: "tabs",
+            wallets: { applePay: 'auto', googlePay: 'auto' }
+        });
+
+        document.getElementById("payment-element").innerHTML = "";
+        paymentElement.mount("#payment-element");
+
+    } catch (e) {
+        console.error("Stripe Init Error:", e);
+        document.getElementById("payment-element").innerHTML = `
+            <div style="padding: 20px; background: rgba(239, 68, 68, 0.1); border: 2px solid #ef4444; border-radius: 8px; color: #ef4444; text-align: center;">
+                <strong>Erreur / Error</strong><br><br>
+                ${e.message}
+            </div>
+        `;
+    }
+}
+
+        async function handleSubmit(e) {
+            e.preventDefault();
+
+            // Collect all attendee data
+            const email1 = document.getElementById('email').value.trim();
+            const name1 = document.getElementById('name').value.trim();
+            if (!email1 || !name1) {
+                showMessage('Veuillez remplir votre nom et votre adresse courriel.');
+                return;
+            }
+
+            var allEmails = [email1];
+            var allNames = [name1];
+            for (var i = 2; i <= qty; i++) {
+                var ei = document.getElementById('email-' + i);
+                var ni = document.getElementById('name-' + i);
+                if (ei && ni) {
+                    if (!ei.value.trim() || !ni.value.trim()) {
+                        showMessage('Veuillez remplir les informations pour tous les billets.');
+                        return;
+                    }
+                    allEmails.push(ei.value.trim());
+                    allNames.push(ni.value.trim());
+                }
+            }
+
+            if (!elements) {
+                showMessage('Le système de paiement n\'est pas actif (Backend hors ligne).');
+                return;
+            }
+
+            setLoading(true);
+
+            const { error, paymentIntent } = await stripe.confirmPayment({
+                elements,
+                confirmParams: { receipt_email: email1 },
+                redirect: 'if_required'
+            });
+
+            if (error) {
+                if (error.type === 'card_error' || error.type === 'validation_error') {
+                    showMessage(error.message);
+                } else {
+                    showMessage('Une erreur inattendue est survenue.');
+                }
+            } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+                let basePath = window.location.origin + window.location.pathname.replace('checkout.html', '');
+                if (window.location.origin === 'null' || window.location.protocol === 'file:') {
+                    basePath = 'file:///' + window.location.pathname.replace('checkout.html', '').replace(/\\/g, '/').replace('///C:', '///C:');
+                }
+                // Build URL: first buyer's email sent, all names encoded
+                var url = basePath + 'success.html';
+                url += '?qty=' + qty;
+                url += '&total=' + total.toFixed(2);
+                url += '&tier=' + encodeURIComponent(globalTier);
+                url += '&email=' + encodeURIComponent(email1);
+                url += '&name=' + encodeURIComponent(name1);
+                url += '&names=' + encodeURIComponent(JSON.stringify(allNames));
+                url += '&emails=' + encodeURIComponent(JSON.stringify(allEmails));
+                if (globalTicketId) url += '&ticketId=' + globalTicketId;
+                url += '&lang=' + lang;
+                url += '&payment_intent=' + paymentIntent.id;
+                window.location.href = url;
+            } else {
+                showMessage('Statut de paiement inattendu.');
+            }
+            setLoading(false);
+        }
+
+        // UI Helpers
+        function showMessage(messageText) {
+            const messageContainer = document.querySelector("#payment-message");
+            messageContainer.classList.remove("hidden");
+            messageContainer.textContent = messageText;
+            setTimeout(function () {
+                messageContainer.classList.add("hidden");
+                messageContainer.textContent = "";
+            }, 6000);
+        }
+
+        function setLoading(isLoading) {
+            if (isLoading) {
+                document.querySelector("#submit").disabled = true;
+                document.querySelector("#spinner").style.display = "inline";
+                document.querySelector("#button-text").style.display = "none";
+            } else {
+                document.querySelector("#submit").disabled = false;
+                document.querySelector("#spinner").style.display = "none";
+                document.querySelector("#button-text").style.display = "inline";
+            }
+        }
+
+        // Boot
+        if (qty > 0) {
+            initialize();
+
+            // Try to listen to real stripe form
+            document.querySelector("#payment-form").addEventListener("submit", handleSubmit);
+        } else {
+            alert("Erreur: Panier vide");
+            window.location.href = "index.html";
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Xperimental Vol.2</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+</head>
+
+<body>
+    <div class="lang-toggle">
+        <button id="btn-fr" class="active" onclick="setLang('fr')">FR</button>
+        <span class="divider">|</span>
+        <button id="btn-en" onclick="setLang('en')">EN</button>
+    </div>
+
+    <!-- HOME PAGE -->
+    <main id="home-page" class="view-active">
+        <div class="poster-container">
+            <!-- Event Poster -->
+            <img src="assets/poster.jpeg" alt="Xperimental Vol.2 Poster">
+        </div>
+
+        <div class="info-text">
+            <h2 id="t-location">356 AV MONT-ROYAL E – MONTREAL</h2>
+        </div>
+
+        <button class="main-btn" onclick="showTickets()" id="t-main-btn">ACHETER BILLETS</button>
+    </main>
+
+    <!-- TICKETS PAGE -->
+    <main id="tickets-page" class="view-hidden">
+
+        <div class="event-header">
+            <p class="event-presenter">Xperimental présente</p>
+            <h1 class="event-title">XPERIMENTAL VOL.2</h1>
+            <p class="event-details">Samedi 27 Mars 2026 de 22:00 à 3:00 au 356 Av Mont-Royal E</p>
+        </div>
+
+        <div class="tickets-layout">
+            <!-- Left Side: Poster -->
+            <div class="tickets-poster-side">
+                <img src="assets/poster.jpeg" alt="Xperimental Vol.2 Poster">
+            </div>
+
+            <!-- Right Side: Ticket Selection -->
+            <div class="ticket-list">
+                <!-- Early Bird Ticket -->
+                <div class="ticket-card" id="card-early" data-tier="early"
+                    style="flex-direction: column; align-items: flex-start; gap: 20px; padding: 32px;">
+                    <div class="ticket-info" style="width:100%;">
+                        <h3 id="t-early-title" style="font-size: 22px; margin-bottom: 8px;">Prévente (Early Bird)</h3>
+                        <p class="ticket-desc" id="t-early-desc">Quantité limitée.</p>
+                        <div class="price" id="p-early" style="font-size: 28px; margin-top: 8px;">$10.00</div>
+                    </div>
+                    <div class="ticket-controls" id="ctrl-early"
+                        style="width: 100%; justify-content: space-between; padding: 10px 16px; border-radius: 40px;">
+                        <button class="qty-btn minus" onclick="updateQty('early', -1)"
+                            style="width: 48px; height: 48px;">-</button>
+                        <span class="qty-display" id="qty-early" style="font-size: 20px; width: 36px;">0</span>
+                        <button class="qty-btn plus" onclick="updateQty('early', 1)"
+                            style="width: 48px; height: 48px;">+</button>
+                    </div>
+                </div>
+
+                <!-- Regular Admission Ticket -->
+                <div class="ticket-card" id="card-regular" data-tier="regular"
+                    style="display: none; flex-direction: column; align-items: flex-start; gap: 20px; padding: 32px;">
+                    <div class="ticket-info" style="width:100%;">
+                        <h3 id="t-regular-title" style="font-size: 22px; margin-bottom: 8px;">Admission Générale
+                            (Regular)</h3>
+                        <p class="ticket-desc" id="t-regular-desc">Accès complet à l'événement.</p>
+                        <div class="price" id="p-regular" style="font-size: 28px; margin-top: 8px;">$15.00</div>
+                    </div>
+                    <div class="ticket-controls" id="ctrl-regular"
+                        style="width: 100%; justify-content: space-between; padding: 10px 16px; border-radius: 40px;">
+                        <button class="qty-btn minus" onclick="updateQty('regular', -1)"
+                            style="width: 48px; height: 48px;">-</button>
+                        <span class="qty-display" id="qty-regular" style="font-size: 20px; width: 36px;">0</span>
+                        <button class="qty-btn plus" onclick="updateQty('regular', 1)"
+                            style="width: 48px; height: 48px;">+</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Back button moved to bottom center -->
+        <div class="back-button-container">
+            <button class="back-btn bottom-centered" onclick="showHome()" id="t-back">← Retour</button>
+        </div>
+    </main>
+
+    <!-- Sticky Checkout Bar -->
+    <div class="checkout-bar" id="checkout-bar">
+        <div class="checkout-content">
+            <div class="order-summary">
+                <span class="total-label" id="t-total-label">Total :</span>
+                <span class="total-price" id="total-price">$0.00</span>
+            </div>
+            <button class="checkout-btn" onclick="checkout()" id="checkout-btn" disabled>
+                Sélectionner
+            </button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

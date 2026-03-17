@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Paiement Réussi / Success - Xperimental Vol.2</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+
+<body class="success-body">
+
+    <div class="success-container">
+        <div class="success-icon-wrapper">
+            <svg class="success-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20 6L9 17L4 12" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+        </div>
+
+        <h1 class="success-title" id="s-title">Paiement Réussi !</h1>
+        <p class="success-subtitle">
+            <span id="s-subtitle-thanks">Merci <span id="customer-name" style="font-weight:600;"></span> pour votre achat.</span>
+            <span id="s-subtitle-sent">Vos billets ont été envoyés par courriel.</span>
+        </p>
+
+        <div class="order-details-card">
+            <div class="order-header">
+                <div>
+                    <div class="order-label" id="s-order-id-lbl">Numéro de Commande</div>
+                    <div class="order-value" id="order-id">#XP-000000</div>
+                </div>
+                <div class="text-right">
+                    <div class="order-label" id="s-total-lbl">Montant Total</div>
+                    <div class="order-value" id="order-total">$0.00</div>
+                </div>
+            </div>
+
+            <div class="ticket-visual" style="flex-direction: column; align-items: flex-start; gap: 20px;">
+                <div style="width: 100%;">
+                    <img src="assets/poster.jpeg" alt="Event Poster"
+                        style="width: 100%; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
+                </div>
+                <div style="width: 100%;">
+                    <h3 style="font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 8px;">XPERIMENTAL VOL.2</h3>
+                    <p style="font-size: 15px; color: var(--text-secondary); margin-bottom: 4px;">Samedi 27 Mars 2026 • 22:00 - 3:00</p>
+                    <p style="font-size: 15px; color: var(--text-secondary); margin-bottom: 16px;">356 AV MONT-ROYAL E, MONTREAL</p>
+                    <div style="background: var(--bg); padding: 12px 16px; border-radius: 8px; display: inline-block;">
+                        <span id="order-qty" style="font-weight: 700; color: var(--text-primary); font-size: 16px;">1x Billet(s)</span>
+                    </div>
+                </div>
+
+                <!-- QR CODES: one per ticket -->
+                <div id="qrcodes-wrapper" style="width: 100%; display: flex; flex-direction: column; gap: 16px;"></div>
+            </div>
+
+            <div style="margin-top: 32px; padding-top: 24px; border-top: 1px dashed var(--border);">
+                <div id="download-btn"
+                    style="background: #111; color: #fff; padding: 18px; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 12px; font-weight: 700; font-size: 15px; cursor: pointer; border: 1px solid #333; letter-spacing: 0.5px;"
+                    onclick="downloadPDF()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                     Télécharger mes billets (PDF)
+                </div>
+            </div>
+        </div>
+
+        <button class="main-btn" style="margin-top: 32px; width:100%; max-width:100%;"
+            onclick="window.location.href='index.html'">Retour à l'accueil</button>
+    </div>
+
+    <script>
+        // ─── Parse URL Params ─────────────────────────────────────────────────────
+        var urlParams = new URLSearchParams(window.location.search);
+        var qty = parseInt(urlParams.get('qty')) || 1;
+        var totalRaw = urlParams.get('total');
+        var total = totalRaw ? parseFloat(totalRaw) : 10.00;
+        var customerEmail = urlParams.get('email') || '';
+        var customerName = urlParams.get('name') || '';
+        var ticketTier = decodeURIComponent(urlParams.get('tier') || 'Prevente (Early Bird)');
+        var paymentIntentId = urlParams.get('payment_intent');
+        var paramTicketId = urlParams.get('ticketId');
+        var orderKey = paymentIntentId || ('mock-' + Date.now());
+
+        // Per-ticket names and emails (from checkout attendee forms)
+        var allNames = [customerName];
+        var allEmails = [customerEmail];
+        try {
+            var namesParam = urlParams.get('names');
+            var emailsParam = urlParams.get('emails');
+            if (namesParam) allNames = JSON.parse(decodeURIComponent(namesParam));
+            if (emailsParam) allEmails = JSON.parse(decodeURIComponent(emailsParam));
+        } catch(e) { console.warn('Could not parse attendee lists'); }
+
+        // Ensure arrays match qty
+        while (allNames.length < qty) allNames.push(allNames[0] || '');
+        while (allEmails.length < qty) allEmails.push(allEmails[0] || '');
+
+        // Global list of generated ticket IDs
+        var allTicketIds = [];
+
+        // ─── Bilingual Dictionary ──────────────────────────────────────────────
+        const dict = {
+            fr: {
+                title: "Paiement Réussi !",
+                thanks: "Merci {name} pour votre achat.",
+                sent: "Vos billets ont été envoyés par courriel.",
+                order_id: "Numéro de Commande",
+                total: "Montant Total",
+                download: "Télécharger mes billets (PDF)",
+                generating: "Génération du PDF...",
+                ready: "✅ PDF téléchargé !",
+                error_pdf: "Erreur PDF",
+                back: "Retour à l'accueil",
+                ticket: "Billet",
+                tickets: "Billets",
+                early: "Early Bird",
+                regular: "Admission Générale (Regular)",
+                holder: "Titulaire : ",
+                event_date: "Samedi 27 Mars 2026 • 22:00 - 3:00"
+            },
+            en: {
+                title: "Payment Successful!",
+                thanks: "Thank you {name} for your purchase.",
+                sent: "Your tickets have been sent to your email.",
+                order_id: "Order Number",
+                total: "Total Amount",
+                download: "Download my tickets (PDF)",
+                generating: "Generating PDF...",
+                ready: "✅ PDF Downloaded!",
+                error_pdf: "PDF Error",
+                back: "Back to Home",
+                ticket: "Ticket",
+                tickets: "Tickets",
+                early: "Early Bird",
+                regular: "General Admission (Regular)",
+                holder: "Holder: ",
+                event_date: "Saturday, March 27, 2026 • 10:00 PM - 3:00 AM"
+            }
+        };
+
+        const lang = urlParams.get('lang') || 'fr';
+        const d = dict[lang] || dict.fr;
+
+        // ─── Static UI Translation ───────────────────────────────────────────
+        document.getElementById('s-title').innerText = d.title;
+        document.getElementById('s-subtitle-thanks').innerHTML = d.thanks.replace('{name}', '<span id="customer-name" style="font-weight:600;">' + customerName + '</span>');
+        document.getElementById('s-subtitle-sent').innerText = d.sent;
+        document.getElementById('s-order-id-lbl').innerText = d.order_id;
+        document.getElementById('s-total-lbl').innerText = d.total;
+        document.getElementById('download-btn').innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+            ${d.download}
+        `;
+        var mainBtnEl = document.querySelector('.main-btn');
+        if (mainBtnEl) mainBtnEl.innerText = d.back;
+
+        var totalEl = document.getElementById('order-total');
+        if (totalEl) totalEl.innerText = '$' + total.toFixed(2);
+        
+        // Translate Tier
+        let translatedTier = ticketTier;
+        if (ticketTier.toLowerCase().includes('early')) translatedTier = d.early;
+        if (ticketTier.toLowerCase().includes('regular')) translatedTier = d.regular;
+        
+        var qtyEl = document.getElementById('order-qty');
+        if (qtyEl) qtyEl.innerText = qty + 'x ' + translatedTier;
+
+        // ─── UUID Generator ────────────────────────────────────────────────────────
+        function generateUUID() {
+            if (window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID();
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        // ─── Render one QR card per ticket ────────────────────────────────────────
+        function renderAllQRCodes(ticketIds) {
+            var wrapper = document.getElementById('qrcodes-wrapper');
+            if (!wrapper) return;
+            wrapper.innerHTML = '';
+
+            ticketIds.forEach(function(ticketId, index) {
+                var shortId = ticketId.substring(0, 8).toUpperCase();
+                if (index === 0) {
+                    var orderEl = document.getElementById('order-id');
+                    if (orderEl) orderEl.innerText = '#XP-' + shortId;
+                }
+
+                var attendeeName = allNames[index] || '';
+                var card = document.createElement('div');
+                card.style.cssText = 'width:100%; display:flex; flex-direction:column; align-items:center; background:white; padding:24px; border-radius:12px; box-sizing:border-box;';
+                card.innerHTML =
+                    '<p style="color:black; font-weight:800; margin-bottom:4px; font-size:16px; margin-top:0;">' + d.ticket.toUpperCase() + ' ' + (index + 1) + ' / ' + ticketIds.length + '</p>' +
+                    '<p style="color:#555; font-size:12px; margin-bottom:2px; margin-top:0;">' + translatedTier + '</p>' +
+                    (attendeeName ? '<p style="color:#888; font-size:11px; margin-bottom:14px; margin-top:0;">' + d.holder + attendeeName + '</p>' : '<div style="margin-bottom:14px;"></div>') +
+                    '<div id="qrcode-' + index + '" style="background:#fff; padding:8px; border-radius:8px;"></div>' +
+                    '<p style="color:#999; font-size:10px; margin-top:10px; margin-bottom:0; font-family:monospace; letter-spacing:1px;">#XP-' + shortId + '</p>';
+                wrapper.appendChild(card);
+
+                if (typeof QRCode !== 'undefined') {
+                    new QRCode(document.getElementById('qrcode-' + index), {
+                        text: ticketId, width: 160, height: 160,
+                        colorDark: '#000000', colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                }
+            });
+        }
+
+        // ─── PDF Download: wallet-pass style (Screen 1 design) ───────────────────
+        function downloadPDF() {
+            if (allTicketIds.length === 0) { alert(lang === 'fr' ? 'Billets pas encore générés.' : 'Tickets not yet generated.'); return; }
+            var btn = document.getElementById('download-btn');
+            btn.innerHTML = d.generating;
+
+            // Build an off-screen container for wallet pass cards
+            var container = document.getElementById('wallet-cards-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'wallet-cards-container';
+                container.style.cssText = 'position:fixed; left:-9999px; top:0; display:flex; flex-direction:column; gap:0;';
+                document.body.appendChild(container);
+            }
+            container.innerHTML = '';
+
+            // Create one wallet card per ticket
+            allTicketIds.forEach(function(ticketId, index) {
+                var shortId = ticketId.substring(0, 8).toUpperCase();
+                var aName = allNames[index] || '-';
+                var tierStr = allTicketIds.length > 1 ? allTicketIds.length + 'x ' + ticketTier : ticketTier;
+
+                var card = document.createElement('div');
+                card.id = 'wallet-card-' + index;
+                card.style.cssText = [
+                    'width:400px',
+                    'background:#000',
+                    'font-family:-apple-system,Helvetica,sans-serif',
+                    'overflow:hidden',
+                    'border-radius:0'
+                ].join(';');
+
+                card.innerHTML =
+                    // Header
+                    '<div style="background:#111;padding:10px 16px;display:flex;justify-content:space-between;align-items:flex-start;">' +
+                        '<div style="font-size:15px;font-weight:800;letter-spacing:3px;color:#fff;">X P E R I M E N T A L</div>' +
+                        '<div style="text-align:right;">' +
+                            '<div style="font-size:10px;color:#aaa;">3/27/26</div>' +
+                            '<div style="font-size:14px;font-weight:700;color:#fff;">10:00 PM</div>' +
+                        '</div>' +
+                    '</div>' +
+                    // Date line
+                    '<div style="background:#000;padding:4px 16px 10px;color:#bbb;font-size:9px;">27/03/2026  356 Av Mont-Royal E  22:00-03:00</div>' +
+                    // Poster
+                    '<img id="wallet-poster-' + index + '" src="assets/poster.jpeg" style="width:100%;display:block;" crossorigin="anonymous">' +
+                    // Info row
+                    '<div style="background:#1a1a1a;padding:14px 20px;display:flex;">' +
+                        '<div style="flex:1;">' +
+                            '<div style="font-size:9px;text-transform:uppercase;color:#888;letter-spacing:0.5px;margin-bottom:5px;">EVENT / ÉVÈNEMENT</div>' +
+                            '<div style="font-size:14px;font-weight:700;color:#fff;">' + tierStr + '</div>' +
+                        '</div>' +
+                        '<div style="flex:1;padding-left:12px;">' +
+                            '<div style="font-size:9px;text-transform:uppercase;color:#888;letter-spacing:0.5px;margin-bottom:5px;">NAME / NOM</div>' +
+                            '<div style="font-size:14px;font-weight:700;color:#fff;">' + aName + '</div>' +
+                        '</div>' +
+                    '</div>' +
+                    // QR section
+                    '<div style="background:#111;padding:30px 20px 32px;display:flex;flex-direction:column;align-items:center;">' +
+                        '<div id="wallet-pdf-qr-' + index + '" style="background:#fff;padding:16px;border-radius:8px;"></div>' +
+                        '<div style="color:#666;font-size:10px;font-family:monospace;margin-top:14px;letter-spacing:1px;">' + shortId + '</div>' +
+                    '</div>';
+
+                container.appendChild(card);
+
+                // Render QR code into the card
+                if (typeof QRCode !== 'undefined') {
+                    new QRCode(document.getElementById('wallet-pdf-qr-' + index), {
+                        text: ticketId, width: 220, height: 220,
+                        colorDark: '#000000', colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.M
+                    });
+                }
+            });
+
+            // Wait for QR codes and images to render
+            setTimeout(function() {
+                var capturePromises = allTicketIds.map(function(_, idx) {
+                    return html2canvas(document.getElementById('wallet-card-' + idx), {
+                        scale: 2,
+                        backgroundColor: '#000',
+                        useCORS: true,
+                        allowTaint: true,
+                        logging: false
+                    });
+                });
+
+                Promise.all(capturePromises).then(function(canvases) {
+                    var jsPDF = window.jspdf.jsPDF;
+
+                    // Build PDF sized to match the card proportions
+                    var card0 = document.getElementById('wallet-card-0');
+                    var cardW = card0 ? card0.offsetWidth : 400;
+                    var cardH = card0 ? card0.offsetHeight : 750;
+
+                    var doc = new jsPDF({ orientation: 'portrait', unit: 'px', format: [cardW, cardH] });
+
+                    canvases.forEach(function(canvas, idx) {
+                        if (idx > 0) doc.addPage([cardW, cardH]);
+                        var imgData = canvas.toDataURL('image/png');
+                        doc.addImage(imgData, 'PNG', 0, 0, cardW, cardH);
+                    });
+
+                    doc.save('Billets_Xperimental_' + allTicketIds[0].substring(0, 6).toUpperCase() + '.pdf');
+                    btn.innerHTML = d.ready;
+                    // Cleanup
+                    container.innerHTML = '';
+                }).catch(function(e) {
+                    console.error('PDF capture error:', e);
+                    btn.innerHTML = d.error_pdf;
+                });
+            }, 1200);
+        }
+
+        // ─── Main Init (after all scripts loaded) ─────────────────────────────────
+        window.addEventListener('load', function() {
+            console.log('Page loaded. QRCode:', typeof QRCode, 'Supabase:', typeof window.supabase);
+
+            var supabase = null;
+            try {
+                if (window.supabase && window.supabase.createClient) {
+                    supabase = window.supabase.createClient(
+                        'https://gzvyzkshymhgyoukhhzx.supabase.co',
+                        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6dnl6a3NoeW1oZ3lvdWtoaHp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzNjczODYsImV4cCI6MjA4ODk0MzM4Nn0.OAeZpSxHMlHDvrb--h98ms_b4fFsbkkVWbnutC_8baA'
+                    );
+                    console.log('Supabase ready');
+                }
+            } catch(e) { console.error('Supabase init:', e); }
+
+            // Try loading cached ticket IDs
+            var cachedIds = localStorage.getItem('tickets_' + orderKey);
+            if (cachedIds) {
+                try { allTicketIds = JSON.parse(cachedIds); } catch(e) { allTicketIds = []; }
+            }
+
+            if (allTicketIds.length === 0) {
+                // Generate one UUID per ticket
+                var baseId = paramTicketId || generateUUID();
+                allTicketIds = [baseId];
+                for (var i = 1; i < qty; i++) allTicketIds.push(generateUUID());
+                console.log('Generated ticket IDs:', allTicketIds);
+
+                // ─── Always send emails to form addresses ─────────────────────
+                function sendEmails() {
+                    allTicketIds.forEach(function(tid, idx) {
+                        var emailTo = allEmails[idx] || allEmails[0] || '';
+                        var nameFor = allNames[idx] || allNames[0] || '';
+                        if (!emailTo) { console.warn('No email for ticket', idx); return; }
+                        console.log('Sending ticket', tid, 'to', emailTo);
+                        var apiBase = window.location.origin;
+                        fetch(apiBase + '/api/send-ticket', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                ticketIds: [tid],
+                                email: emailTo,
+                                tier: ticketTier,
+                                customerName: nameFor,
+                                orderId: paymentIntentId || orderKey,
+                                qty: qty,
+                                total: total
+                            })
+                        }).then(function(r) { return r.json(); })
+                          .then(function(d) { console.log('✅ Email sent to', emailTo, ':', d); })
+                          .catch(function(e) { console.error('❌ Email error for', emailTo, ':', e); });
+                    });
+                }
+
+                // ─── Save cache + send emails only once per payment ───────────
+                localStorage.setItem('tickets_' + orderKey, JSON.stringify(allTicketIds));
+                var emailsSentKey = 'sent_' + orderKey;
+                if (!localStorage.getItem(emailsSentKey)) {
+                    localStorage.setItem(emailsSentKey, '1');
+                    sendEmails(); // backend will insert into Supabase too
+                } else {
+                    console.log('Emails already sent for this order, skipping.');
+                }
+
+                // NOTE: Supabase insert is handled by the backend (/api/send-ticket)
+                // No client-side insert needed — avoids duplicates
+            }
+
+            renderAllQRCodes(allTicketIds);
+        });
+    </script>
+</body>
+
+</html>
