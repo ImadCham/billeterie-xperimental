@@ -886,3 +886,98 @@ body {
     .checkout-summary-section { padding: 30px 16px; }
     .checkout-title { font-size: 24px; }
 }
+/* --- MOBILE OPTIMIZATIONS --- */
+@media (max-width: 768px) {
+    .view-active {
+        padding: 40px 16px;
+    }
+
+    .event-title {
+        font-size: 32px;
+    }
+
+    .tickets-layout {
+        flex-direction: column;
+        gap: 24px;
+    }
+
+    .tickets-poster-side {
+        flex: none;
+        width: 100%;
+        max-width: 400px;
+        margin: 0 auto;
+    }
+
+    .ticket-list {
+        width: 100%;
+    }
+
+    .ticket-card {
+        padding: 20px !important;
+    }
+
+    .checkout-bar {
+        padding: 16px;
+    }
+
+    .checkout-content {
+        flex-direction: row; /* Keep horizontal but smaller */
+        gap: 12px;
+    }
+
+    .total-price {
+        font-size: 22px;
+    }
+
+    .checkout-btn {
+        padding: 12px 20px;
+        font-size: 14px;
+    }
+
+    /* Checkout Page */
+    .checkout-container {
+        flex-direction: column;
+        margin: 20px auto;
+        border-radius: 0;
+    }
+
+    .checkout-form-section {
+        padding: 32px 20px;
+    }
+
+    .checkout-summary-section {
+        width: 100%;
+        border-left: none;
+        border-top: 1px solid var(--border);
+        padding: 32px 20px;
+    }
+
+    .checkout-summary-sticky {
+        position: static;
+    }
+
+    .success-container {
+        margin: 20px auto;
+        padding: 24px 16px;
+        border-radius: 0;
+    }
+}
+
+/* Fix for small phones */
+@media (max-width: 480px) {
+    .event-title {
+        font-size: 28px;
+    }
+    
+    .event-details {
+        font-size: 14px;
+    }
+
+    .ticket-info h3 {
+        font-size: 18px;
+    }
+
+    .price {
+        font-size: 24px;
+    }
+}

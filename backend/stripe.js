@@ -27,7 +27,8 @@ module.exports = async (req, res) => {
         
         // CAPACITY LIMITS
         const CAPACITY_LIMIT = 300;
-        const EARLY_BIRD_LIMIT = 80;
+        const EARLY_BIRD_LIMIT = 30;
+        const REGULAR_LIMIT = 70; // 30 + 40
         
         let subtotal = 0;
         let totalQty = 0;
@@ -38,15 +39,20 @@ module.exports = async (req, res) => {
             totalQty += qty;
             
             if (item.id === 'early') {
-                // If user somehow tries to buy early bird when sold out
                 if (totalSold >= EARLY_BIRD_LIMIT) {
                     return res.status(400).json({ error: "Les billets Early Bird sont épuisés." });
                 }
                 subtotal += qty * 10.00;
                 mainTier = "Early Bird";
-            } else {
+            } else if (item.id === 'regular') {
+                if (totalSold >= REGULAR_LIMIT) {
+                    return res.status(400).json({ error: "Les billets Admission Générale sont épuisés." });
+                }
                 subtotal += qty * 15.00;
-                if (!mainTier) mainTier = "Admission Générale";
+                mainTier = "Admission Générale";
+            } else if (item.id === 'last') {
+                subtotal += qty * 20.00;
+                mainTier = "Dernière Minute (Last Chance)";
             }
         }
 

@@ -13,10 +13,12 @@ const dict = {
         main_btn: "ACHETER BILLETS",
         back: "← Retour",
         select: "Sélectionner vos billets",
-        early_title: "Early Bird",
-        early_desc: "Quantité limitée. (Seulement 80 disponibles)",
+        early_title: "Prévente (Early Bird)",
+        early_desc: "Quantité limitée.",
         regular_title: "Admission Générale (Regular)",
         regular_desc: "Accès standard à l'événement.",
+        last_title: "Dernière Minute (Last Chance)",
+        last_desc: "Dernières places disponibles.",
         total_label: "Total :",
         buy_empty: "Sélectionner",
         buy_n: "Acheter",
@@ -34,9 +36,11 @@ const dict = {
         back: "← Back",
         select: "Select Tickets",
         early_title: "Early Bird",
-        early_desc: "Limited quantity. (Only 80 available)",
+        early_desc: "Limited quantity.",
         regular_title: "General Admission (Regular)",
         regular_desc: "Standard access to the event.",
+        last_title: "Last Chance",
+        last_desc: "Last tickets available.",
         total_label: "Total:",
         buy_empty: "Select",
         buy_n: "Buy",
@@ -53,11 +57,13 @@ const dict = {
 let currentLang = 'fr';
 let quantities = {
     early: 0,
-    regular: 0
+    regular: 0,
+    last: 0
 };
 const TICKETS = {
     early: 10.00,
-    regular: 15.00
+    regular: 15.00,
+    last: 20.00
 };
 
 // Change Language
@@ -83,6 +89,8 @@ function setLang(lang) {
     setIfExists('t-early-desc', d.early_desc);
     setIfExists('t-regular-title', d.regular_title);
     setIfExists('t-regular-desc', d.regular_desc);
+    setIfExists('t-last-title', d.last_title);
+    setIfExists('t-last-desc', d.last_desc);
     
     // Header & Details
     const presenter = document.querySelector('.event-presenter');
@@ -124,7 +132,7 @@ function updateQty(tier, change) {
     if (newQty < 0) return;
     
     // Limit to 10 total per transaction to avoid abuse
-    const totalCurrent = quantities.early + quantities.regular;
+    const totalCurrent = quantities.early + quantities.regular + quantities.last;
     if (change > 0 && totalCurrent >= 10) return;
     
     quantities[tier] = newQty;
@@ -135,8 +143,8 @@ function updateQty(tier, change) {
 
 // Calculate Total & update Bar
 function updateCheckoutUI() {
-    const totalItems = quantities.early + quantities.regular;
-    const totalAmount = (quantities.early * TICKETS.early) + (quantities.regular * TICKETS.regular);
+    const totalItems = quantities.early + quantities.regular + quantities.last;
+    const totalAmount = (quantities.early * TICKETS.early) + (quantities.regular * TICKETS.regular) + (quantities.last * TICKETS.last);
     
     document.getElementById('total-price').innerText = `$${totalAmount.toFixed(2)}`;
     
@@ -159,7 +167,7 @@ function updateCheckoutUI() {
 
 // Dummy Checkout Function for Stripe Integration
 function checkout() {
-    const totalAmount = (quantities.early * TICKETS.early) + (quantities.regular * TICKETS.regular);
+    const totalAmount = (quantities.early * TICKETS.early) + (quantities.regular * TICKETS.regular) + (quantities.last * TICKETS.last);
     
     const checkoutBtn = document.getElementById('checkout-btn');
     const d = dict[currentLang];
@@ -170,10 +178,12 @@ function checkout() {
     const items = [];
     if (quantities.early > 0) items.push(`early:${quantities.early}`);
     if (quantities.regular > 0) items.push(`regular:${quantities.regular}`);
+    if (quantities.last > 0) items.push(`last:${quantities.last}`);
     
     // Redirect to checkout.html with query parameters
+    const totalQty = quantities.early + quantities.regular + quantities.last;
     setTimeout(() => {
-        const queryParams = `?qty=${quantities.early + quantities.regular}&items=${items.join(',')}&total=${totalAmount}&lang=${currentLang}`;
+        const queryParams = `?qty=${totalQty}&items=${items.join(',')}&total=${totalAmount}&lang=${currentLang}`;
         
         if (window.location.protocol === 'file:') {
             window.location.href = `http://localhost:3000/checkout.html${queryParams}`;
@@ -196,12 +206,13 @@ document.addEventListener("DOMContentLoaded", async () => {
             
         let totalSold = count || 0;
         const CAPACITY_LIMIT = 300;
-        const EARLY_BIRD_LIMIT = 80;
+        const EARLY_BIRD_LIMIT = 30; // UPDATED to 30
+        const REGULAR_LIMIT = 70;    // 30 EARLY + 40 REGULAR = 70 TOTAL
 
         // 1. Check Full Capacity
         if (!error && totalSold >= CAPACITY_LIMIT) {
              // ... already handled by backend error but let's hide in UI
-             ["early", "regular"].forEach(tier => {
+             ["early", "regular", "last"].forEach(tier => {
                  const card = document.getElementById(`card-${tier}`);
                  if (card) card.classList.add('sold-out');
                  const ctrl = document.getElementById(`ctrl-${tier}`);
@@ -219,26 +230,18 @@ document.addEventListener("DOMContentLoaded", async () => {
              return;
         }
         
-        // 2. Check Early Bird Limit
-        if (!error && totalSold >= EARLY_BIRD_LIMIT) {
-            // Hide Early Bird
-            const ebCard = document.getElementById('card-early');
-            if (ebCard) ebCard.style.display = 'none';
+        // Hide all first
+        document.getElementById('card-early').style.display = 'none';
+        document.getElementById('card-regular').style.display = 'none';
+        document.getElementById('card-last').style.display = 'none';
 
-            // Show Regular
-            const regCard = document.getElementById('card-regular');
-            if (regCard) {
-                regCard.style.display = 'flex';
-                // Reset Regular quantity just in case
-                quantities.regular = 0;
-            }
+        // 2. Logic to show the current tier
+        if (!error && totalSold < EARLY_BIRD_LIMIT) {
+            document.getElementById('card-early').style.display = 'flex';
+        } else if (!error && totalSold < REGULAR_LIMIT) {
+            document.getElementById('card-regular').style.display = 'flex';
         } else {
-            // Under 80: Show only Early Bird
-            const ebCard = document.getElementById('card-early');
-            if (ebCard) ebCard.style.display = 'flex';
-            
-            const regCard = document.getElementById('card-regular');
-            if (regCard) regCard.style.display = 'none';
+            document.getElementById('card-last').style.display = 'flex';
         }
     } catch(err) {
         console.error("Error fetching ticket pricing state", err);

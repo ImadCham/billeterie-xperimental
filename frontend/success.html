@@ -125,6 +125,7 @@
                 tickets: "Billets",
                 early: "Early Bird",
                 regular: "Admission Générale (Regular)",
+                last: "Dernière Minute (Last Chance)",
                 holder: "Titulaire : ",
                 event_date: "Samedi 27 Mars 2026 • 22:00 - 3:00"
             },
@@ -143,6 +144,7 @@
                 tickets: "Tickets",
                 early: "Early Bird",
                 regular: "General Admission (Regular)",
+                last: "Last Chance",
                 holder: "Holder: ",
                 event_date: "Saturday, March 27, 2026 • 10:00 PM - 3:00 AM"
             }
@@ -176,7 +178,8 @@
         // Translate Tier
         let translatedTier = ticketTier;
         if (ticketTier.toLowerCase().includes('early')) translatedTier = d.early;
-        if (ticketTier.toLowerCase().includes('regular')) translatedTier = d.regular;
+        else if (ticketTier.toLowerCase().includes('regular')) translatedTier = d.regular;
+        else if (ticketTier.toLowerCase().includes('last')) translatedTier = d.last;
         
         var qtyEl = document.getElementById('order-qty');
         if (qtyEl) qtyEl.innerText = qty + 'x ' + translatedTier;

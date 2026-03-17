@@ -124,8 +124,9 @@ const dict = {
         summary_title: "Résumé de la commande / Order Summary",
         summary_fees: "Frais de service / Service Fee",
         secure_text: "Paiement 100% sécurisé géré par Stripe",
-        early: "Early Bird",
-        regular: "Admission Générale (Regular)"
+        early: "Prévente (Early Bird)",
+        regular: "Admission Générale (Regular)",
+        last: "Dernière Minute (Last Chance)"
     },
     en: {
         title: "Payment",
@@ -143,7 +144,8 @@ const dict = {
         summary_fees: "Service Fee",
         secure_text: "100% Secure payment powered by Stripe",
         early: "Early Bird",
-        regular: "General Admission (Regular)"
+        regular: "General Admission (Regular)",
+        last: "Last Chance"
     }
 };
 
@@ -160,7 +162,9 @@ let summaryHtml = "";
 
 itemPairs.forEach(pair => {
     const [tier, q] = pair.split(':');
-    const price = tier === 'early' ? 10.00 : 15.00;
+    let price = 15.00;
+    if (tier === 'early') price = 10.00;
+    if (tier === 'last') price = 20.00;
     const count = parseInt(q);
     subtotal += count * price;
     

@@ -70,9 +70,8 @@
                 <div class="ticket-card" id="card-regular" data-tier="regular"
                     style="display: none; flex-direction: column; align-items: flex-start; gap: 20px; padding: 32px;">
                     <div class="ticket-info" style="width:100%;">
-                        <h3 id="t-regular-title" style="font-size: 22px; margin-bottom: 8px;">Admission Générale
-                            (Regular)</h3>
-                        <p class="ticket-desc" id="t-regular-desc">Accès complet à l'événement.</p>
+                        <h3 id="t-regular-title" style="font-size: 22px; margin-bottom: 8px;">Admission Générale (Regular)</h3>
+                        <p class="ticket-desc" id="t-regular-desc">Accès standard à l'événement.</p>
                         <div class="price" id="p-regular" style="font-size: 28px; margin-top: 8px;">$15.00</div>
                     </div>
                     <div class="ticket-controls" id="ctrl-regular"
@@ -81,6 +80,24 @@
                             style="width: 48px; height: 48px;">-</button>
                         <span class="qty-display" id="qty-regular" style="font-size: 20px; width: 36px;">0</span>
                         <button class="qty-btn plus" onclick="updateQty('regular', 1)"
+                            style="width: 48px; height: 48px;">+</button>
+                    </div>
+                </div>
+
+                <!-- Last Chance Ticket -->
+                <div class="ticket-card" id="card-last" data-tier="last"
+                    style="display: none; flex-direction: column; align-items: flex-start; gap: 20px; padding: 32px;">
+                    <div class="ticket-info" style="width:100%;">
+                        <h3 id="t-last-title" style="font-size: 22px; margin-bottom: 8px;">Dernière Minute (Last Chance)</h3>
+                        <p class="ticket-desc" id="t-last-desc">Dernières places disponibles.</p>
+                        <div class="price" id="p-last" style="font-size: 28px; margin-top: 8px;">$20.00</div>
+                    </div>
+                    <div class="ticket-controls" id="ctrl-last"
+                        style="width: 100%; justify-content: space-between; padding: 10px 16px; border-radius: 40px;">
+                        <button class="qty-btn minus" onclick="updateQty('last', -1)"
+                            style="width: 48px; height: 48px;">-</button>
+                        <span class="qty-display" id="qty-last" style="font-size: 20px; width: 36px;">0</span>
+                        <button class="qty-btn plus" onclick="updateQty('last', 1)"
                             style="width: 48px; height: 48px;">+</button>
                     </div>
                 </div>
