@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin — Xperimental Vol.2</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #060606;
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        /* LOGIN OVERLAY */
+        #login-screen {
+            position: fixed; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: #060606;
+            z-index: 1000;
+        }
+        .login-box {
+            background: #111;
+            border: 1px solid #222;
+            border-radius: 20px;
+            padding: 48px 40px;
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+        }
+        .login-box h1 { font-size: 20px; font-weight: 800; letter-spacing: 2px; margin-bottom: 8px; color: #fff; text-transform: uppercase; }
+        .login-box p { font-size: 13px; color: #666; margin-bottom: 32px; }
+        .login-box input {
+            width: 100%; padding: 14px 16px; border-radius: 10px;
+            border: 1px solid #2a2a2a; background: #1a1a1a;
+            color: #fff; font-size: 15px; margin-bottom: 16px;
+            letter-spacing: 2px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .login-box input:focus { border-color: #7c3aed; }
+        .login-box button {
+            width: 100%; padding: 14px; border-radius: 10px;
+            background: #7c3aed; border: none; color: #fff;
+            font-size: 15px; font-weight: 700; cursor: pointer;
+            transition: background 0.2s;
+        }
+        .login-box button:hover { background: #6d28d9; }
+        #login-error { color: #f87171; font-size: 13px; margin-top: 12px; display: none; }
+
+        /* DASHBOARD */
+        #dashboard { display: none; }
+        .top-bar {
+            background: #0d0d0d;
+            border-bottom: 1px solid #1a1a1a;
+            padding: 20px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .top-bar-left h1 { font-size: 16px; font-weight: 800; letter-spacing: 3px; text-transform: uppercase; }
+        .top-bar-left span { font-size: 12px; color: #555; display: block; margin-top: 2px; }
+        .top-bar-right { display: flex; gap: 12px; align-items: center; }
+        #refresh-btn, #export-btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+        #refresh-btn { background: #1a1a1a; color: #999; border: 1px solid #2a2a2a; }
+        #refresh-btn:hover { background: #222; color: #fff; }
+        #export-btn { background: #059669; color: #fff; }
+        #export-btn:hover { background: #047857; }
+
+        .main { padding: 32px; }
+
+        /* STAT CARDS */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+        .stat-card {
+            background: #111;
+            border: 1px solid #1e1e1e;
+            border-radius: 16px;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-card::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, #7c3aed, #4f46e5);
+        }
+        .stat-card .label { font-size: 11px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+        .stat-card .value { font-size: 36px; font-weight: 800; color: #fff; line-height: 1; }
+        .stat-card .sub { font-size: 13px; color: #555; margin-top: 6px; }
+        .progress-bar { height: 4px; background: #1a1a1a; border-radius: 4px; margin-top: 12px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #7c3aed, #4f46e5); border-radius: 4px; transition: width 0.8s ease; }
+
+        /* TIER BREAKDOWN */
+        .tier-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 32px;
+        }
+        .tier-card {
+            background: #0d0d0d;
+            border: 1px solid #1a1a1a;
+            border-radius: 12px;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .tier-card .tier-name { font-size: 13px; font-weight: 600; color: #aaa; }
+        .tier-card .tier-count { font-size: 24px; font-weight: 800; color: #fff; }
+        .tier-card .tier-price { font-size: 11px; color: #555; margin-top: 2px; }
+
+        /* TABLE */
+        .table-section { background: #0d0d0d; border: 1px solid #1a1a1a; border-radius: 16px; overflow: hidden; }
+        .table-header { padding: 20px 24px; border-bottom: 1px solid #1a1a1a; display: flex; justify-content: space-between; align-items: center; }
+        .table-header h2 { font-size: 14px; font-weight: 700; color: #fff; }
+        #search-input {
+            padding: 8px 14px; border-radius: 8px;
+            border: 1px solid #222; background: #111;
+            color: #fff; font-size: 13px; outline: none; width: 200px;
+        }
+        table { width: 100%; border-collapse: collapse; }
+        thead tr { background: #0a0a0a; }
+        thead th { padding: 12px 20px; text-align: left; font-size: 11px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #1a1a1a; }
+        tbody tr { border-bottom: 1px solid #111; transition: background 0.15s; }
+        tbody tr:hover { background: #111; }
+        tbody td { padding: 14px 20px; font-size: 13px; color: #ccc; }
+        .badge {
+            display: inline-block;
+            padding: 3px 8px; border-radius: 4px;
+            font-size: 11px; font-weight: 600;
+        }
+        .badge-early { background: rgba(124,58,237,0.15); color: #a78bfa; }
+        .badge-regular { background: rgba(59,130,246,0.15); color: #60a5fa; }
+        .badge-last { background: rgba(239,68,68,0.15); color: #f87171; }
+        .badge-unknown { background: rgba(107,114,128,0.15); color: #9ca3af; }
+        .badge-in { background: rgba(16,185,129,0.15); color: #34d399; }
+        .badge-out { background: rgba(30,30,30,1); color: #555; border: 1px solid #222; }
+
+        #loading { text-align: center; padding: 60px; color: #555; font-size: 14px; }
+
+        @media (max-width: 600px) {
+            .tier-grid { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+            .top-bar { flex-direction: column; gap: 12px; }
+            thead th:nth-child(4), tbody td:nth-child(4) { display: none; }
+            .main { padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+    <div class="login-box">
+        <h1>XPERIMENTAL</h1>
+        <p>Accès admin réservé</p>
+        <input type="password" id="pw-input" placeholder="Mot de passe" onkeydown="if(event.key==='Enter') doLogin()">
+        <button onclick="doLogin()">Accéder au tableau de bord</button>
+        <div id="login-error">Mot de passe incorrect</div>
+    </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <h1>Admin — Xperimental Vol.2</h1>
+            <span>Tableau de bord des ventes</span>
+        </div>
+        <div class="top-bar-right">
+            <span id="last-refresh" style="font-size:12px; color:#555;"></span>
+            <button id="refresh-btn" onclick="loadStats()">↻ Actualiser</button>
+            <button id="export-btn" onclick="exportCSV()">↓ Exporter CSV</button>
+        </div>
+    </div>
+
+    <div class="main">
+        <div id="loading">Chargement des données...</div>
+
+        <div id="stats-content" style="display:none;">
+            <!-- TOP STATS -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="label">Total Billets Vendus</div>
+                    <div class="value" id="stat-total">—</div>
+                    <div class="sub" id="stat-capacity">/ 300 billets</div>
+                    <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Revenus Bruts</div>
+                    <div class="value" id="stat-revenue">—</div>
+                    <div class="sub">Avant frais et taxes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Billets Scannés</div>
+                    <div class="value" id="stat-scanned">—</div>
+                    <div class="sub">À la porte</div>
+                </div>
+            </div>
+
+            <!-- TIER BREAKDOWN -->
+            <div class="tier-grid">
+                <div class="tier-card">
+                    <div>
+                        <div class="tier-name">Early Bird</div>
+                        <div class="tier-price">10$ / billet</div>
+                    </div>
+                    <div>
+                        <div class="tier-count" id="tier-early">0</div>
+                    </div>
+                </div>
+                <div class="tier-card">
+                    <div>
+                        <div class="tier-name">Admission Générale</div>
+                        <div class="tier-price">15$ / billet</div>
+                    </div>
+                    <div>
+                        <div class="tier-count" id="tier-regular">0</div>
+                    </div>
+                </div>
+                <div class="tier-card">
+                    <div>
+                        <div class="tier-name">Last Chance</div>
+                        <div class="tier-price">20$ / billet</div>
+                    </div>
+                    <div>
+                        <div class="tier-count" id="tier-last">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ATTENDEES TABLE -->
+            <div class="table-section">
+                <div class="table-header">
+                    <h2>Liste des participants (<span id="table-count">0</span>)</h2>
+                    <input type="text" id="search-input" placeholder="🔍 Filtrer par nom ou email..." oninput="filterTable()">
+                </div>
+                <table id="attendees-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Nom</th>
+                            <th>Email</th>
+                            <th>Type de Billet</th>
+                            <th>Date d'achat</th>
+                            <th>Check-in</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attendees-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentPassword = '';
+let allAttendees = [];
+
+function doLogin() {
+    const pw = document.getElementById('pw-input').value;
+    if (!pw) return;
+    currentPassword = pw;
+    loadStats();
+}
+
+async function loadStats() {
+    const apiBase = window.location.origin;
+    const url = `${apiBase}/api/admin/stats?p=${encodeURIComponent(currentPassword)}`;
+    
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('stats-content').style.display = 'none';
+
+    try {
+        const res = await fetch(url);
+        if (res.status === 401) {
+            document.getElementById('login-error').style.display = 'block';
+            document.getElementById('loading').style.display = 'none';
+            return;
+        }
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+
+        // Show dashboard
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+        document.getElementById('login-error').style.display = 'none';
+
+        // Fill stats
+        document.getElementById('stat-total').innerText = data.total;
+        document.getElementById('stat-capacity').innerText = `/ ${data.capacity} places`;
+        document.getElementById('stat-revenue').innerText = `$${data.revenue}`;
+        
+        const scanned = (data.attendees || []).filter(a => a.checked_in).length;
+        document.getElementById('stat-scanned').innerText = scanned;
+
+        const pct = Math.min(100, Math.round((data.total / data.capacity) * 100));
+        document.getElementById('progress-fill').style.width = pct + '%';
+
+        document.getElementById('tier-early').innerText = data.tiers.early || 0;
+        document.getElementById('tier-regular').innerText = data.tiers.regular || 0;
+        document.getElementById('tier-last').innerText = data.tiers.last || 0;
+
+        allAttendees = data.attendees || [];
+        renderTable(allAttendees);
+
+        const now = new Date();
+        document.getElementById('last-refresh').innerText = `Mis à jour à ${now.toLocaleTimeString('fr-CA')}`;
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('stats-content').style.display = 'block';
+    } catch (e) {
+        document.getElementById('loading').innerText = 'Erreur : ' + e.message;
+    }
+}
+
+function getTierBadge(tier) {
+    const t = (tier || '').toLowerCase();
+    if (t.includes('early')) return `<span class="badge badge-early">Early Bird</span>`;
+    if (t.includes('last') || t.includes('derni')) return `<span class="badge badge-last">Last Chance</span>`;
+    if (t.includes('regular') || t.includes('adm') || t.includes('g')) return `<span class="badge badge-regular">Régulier</span>`;
+    return `<span class="badge badge-unknown">${tier || '—'}</span>`;
+}
+
+function renderTable(attendees) {
+    const tbody = document.getElementById('attendees-tbody');
+    document.getElementById('table-count').innerText = attendees.length;
+    
+    if (attendees.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:40px; color:#555;">Aucun participant pour l\'instant.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = attendees.map((a, i) => {
+        const date = a.created_at ? new Date(a.created_at).toLocaleString('fr-CA', { dateStyle: 'short', timeStyle: 'short' }) : '—';
+        const checkinBadge = a.checked_in
+            ? '<span class="badge badge-in">✓ Entré</span>'
+            : '<span class="badge badge-out">En attente</span>';
+        return `<tr>
+            <td style="color:#555">${i + 1}</td>
+            <td style="font-weight:600; color:#fff">${a.name}</td>
+            <td>${a.email}</td>
+            <td>${getTierBadge(a.tier)}</td>
+            <td>${date}</td>
+            <td>${checkinBadge}</td>
+        </tr>`;
+    }).join('');
+}
+
+function filterTable() {
+    const q = document.getElementById('search-input').value.toLowerCase();
+    const filtered = allAttendees.filter(a =>
+        (a.name || '').toLowerCase().includes(q) ||
+        (a.email || '').toLowerCase().includes(q) ||
+        (a.tier || '').toLowerCase().includes(q)
+    );
+    renderTable(filtered);
+}
+
+function exportCSV() {
+    if (allAttendees.length === 0) { alert('Aucune donnée à exporter.'); return; }
+    
+    const headers = ['#', 'Nom', 'Email', 'Type de Billet', 'Check-in', 'Date'];
+    const rows = allAttendees.map((a, i) => [
+        i + 1,
+        `"${(a.name || '').replace(/"/g, '""')}"`,
+        `"${(a.email || '').replace(/"/g, '""')}"`,
+        `"${(a.tier || '').replace(/"/g, '""')}"`,
+        a.checked_in ? 'Entré' : 'En attente',
+        a.created_at ? new Date(a.created_at).toLocaleString('fr-CA') : ''
+    ]);
+
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Xperimental_Vol2_Attendees_${new Date().toISOString().slice(0,10)}.csv`;
+    link.click();
+}
+
+// Auto-refresh every 2 minutes when on dashboard
+setInterval(() => {
+    if (document.getElementById('dashboard').style.display !== 'none') loadStats();
+}, 120000);
+</script>
+</body>
+</html>

@@ -84,9 +84,11 @@ app.post("/api/send-ticket", emailLimiter, async (req, res) => {
 
         // 3. Save ticket(s) to Supabase attendees table (upsert — safe if called twice)
         const rows = ids.map(id => ({
-            qr_code: id,     // On utilise la colonne qr_code qui n'a pas de FK
+            qr_code: id,
             email: email,
-            checked_in: false
+            checked_in: false,
+            tier: ticketTier,
+            customer_name: customerName || ''
         }));
 
         const { error: dbError } = await supabase
@@ -95,6 +97,9 @@ app.post("/api/send-ticket", emailLimiter, async (req, res) => {
 
         if (dbError) {
             console.error('Supabase insert error:', dbError.message);
+            // Retry without new columns if schema not yet updated
+            const fallbackRows = ids.map(id => ({ qr_code: id, email: email, checked_in: false }));
+            await supabase.from('attendees').upsert(fallbackRows, { onConflict: 'qr_code' });
         } else {
             console.log(`✅ ${ids.length} ticket(s) saved to Supabase for ${email}`);
         }
@@ -107,6 +112,56 @@ app.post("/api/send-ticket", emailLimiter, async (req, res) => {
         res.json({ success: true, message: "Email Sent!" });
     } catch (e) {
         console.error("Failed to send ticket email:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// --- ADMIN STATS ROUTE (Password-protected) ---
+app.get("/api/admin/stats", async (req, res) => {
+    const password = req.query.p;
+    const adminPassword = process.env.ADMIN_PASSWORD || 'xpAdmin2026';
+    
+    if (password !== adminPassword) {
+        return res.status(401).json({ error: "Non autorisé." });
+    }
+
+    try {
+        const { data, error, count } = await supabase
+            .from('attendees')
+            .select('*', { count: 'exact' })
+            .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+
+        const attendees = data || [];
+        const totalSold = count || attendees.length;
+
+        // Per-tier breakdown
+        const tierCounts = { early: 0, regular: 0, last: 0, unknown: 0 };
+        let revenue = 0;
+        attendees.forEach(a => {
+            const t = (a.tier || '').toLowerCase();
+            if (t.includes('early')) { tierCounts.early++; revenue += 10; }
+            else if (t.includes('last') || t.includes('derni')) { tierCounts.last++; revenue += 20; }
+            else if (t.includes('regular') || t.includes('g') || t.includes('adm')) { tierCounts.regular++; revenue += 15; }
+            else { tierCounts.unknown++; revenue += 10; }
+        });
+
+        res.json({
+            total: totalSold,
+            capacity: 300,
+            revenue: revenue.toFixed(2),
+            tiers: tierCounts,
+            attendees: attendees.map(a => ({
+                name: a.customer_name || a.name || '—',
+                email: a.email || '—',
+                tier: a.tier || '—',
+                checked_in: a.checked_in || false,
+                created_at: a.created_at || null
+            }))
+        });
+    } catch (e) {
+        console.error("Admin stats error:", e);
         res.status(500).json({ error: e.message });
     }
 });
