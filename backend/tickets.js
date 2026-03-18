@@ -19,10 +19,14 @@ async function generateTicket(ids, tier = 'Régulier', names = '') {
     const posterPath = path.join(__dirname, '../frontend/assets/poster.jpeg');
     const hasPoster = fs.existsSync(posterPath);
 
-    return new Promise((resolve, reject) => {
-        const dir = path.join(__dirname, '../tickets');
-        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    // Ensure output directory exists (critical for Render)
+    const dir = path.join(__dirname, '../tickets');
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+        console.log('Created tickets directory:', dir);
+    }
 
+    return new Promise((resolve, reject) => {
         const filePath = path.join(dir, `${ticketIds[0]}.pdf`);
 
         // Use custom page size matching the wallet pass proportions (like a phone screen)

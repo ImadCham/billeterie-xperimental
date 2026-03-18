@@ -28,9 +28,14 @@ const allowedOrigins = [
 
 app.use(cors({
     origin: function(origin, callback) {
-        // Allow requests with no origin (mobile apps, curl, etc.)
+        // Allow requests with no origin (mobile apps, same-origin fetches, curl)
         if (!origin) return callback(null, true);
+        // Allow Render internal same-domain requests
+        if (origin === 'null') return callback(null, true);
         if (allowedOrigins.includes(origin)) return callback(null, true);
+        // Also allow any subdomain of onrender.com (for flexibility)
+        if (origin && origin.endsWith('.onrender.com')) return callback(null, true);
+        console.warn('CORS blocked origin:', origin);
         callback(new Error('Not allowed by CORS'));
     }
 }));
@@ -44,7 +49,7 @@ const paymentLimiter = rateLimit({
 
 const emailLimiter = rateLimit({
     windowMs: 60 * 1000,
-    max: 5,
+    max: 30, // Increased to handle group purchases
     message: { error: 'Trop de requêtes. Réessayez dans 1 minute.' }
 });
 
@@ -74,10 +79,11 @@ app.post("/api/send-ticket", emailLimiter, async (req, res) => {
             return res.status(400).json({ error: "Missing ticketId(s) or email" });
         }
 
-        console.log(`Building PDF for ${ids.length} ticket(s) → ${email}...`);
+        console.log(`📧 /api/send-ticket called → email: ${email}, tier: ${tier}, qty: ${qty}, ticketIds: ${JSON.stringify(ticketIds || ticketId)}`);
 
         // 1. Generate PDF
         const pdfPath = await generateTicket(ids, ticketTier, customerName || '');
+        console.log(`📄 PDF generated at: ${pdfPath}`);
 
         // 2. Send email with pricing details
         await sendTicket(email, pdfPath, ids[0], ticketTier, customerName || '', ticketQty, ticketTotal);
