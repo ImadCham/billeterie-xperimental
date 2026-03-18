@@ -16,15 +16,24 @@ async function sendTicket(email, file, ticketId, tier = 'Régulier', customerNam
     const orderNum = '#XP-' + ticketId.substring(0, 8).toUpperCase();
 
     // --- Calculate pricing breakdown ---
-    const isEarly = tier.toLowerCase().includes('early');
-    const unitPrice = isEarly ? 10.00 : 15.00;
+    const tierLower = tier.toLowerCase();
+    const isEarly = tierLower.includes('early');
+    const isLast = tierLower.includes('last');
+    
+    let unitPrice = 15.00;
+    if (isEarly) unitPrice = 10.00;
+    else if (isLast) unitPrice = 20.00;
+
     const subtotal = unitPrice * qty;
     const fraisService = qty * 1.00;
     const montantTaxable = subtotal + fraisService;
     const tps = montantTaxable * 0.05;
     const tvq = montantTaxable * 0.09975;
     const totalFinal = total > 0 ? total : (montantTaxable + tps + tvq);
-    const tierDisplay = isEarly ? 'Early Bird' : 'Admission Générale';
+    
+    let tierDisplay = 'Admission Générale';
+    if (isEarly) tierDisplay = 'Early Bird';
+    else if (isLast) tierDisplay = 'Dernière Minute (Last Chance)';
     const orderDate = new Date().toLocaleDateString('fr-CA');
 
     const htmlTemplate = `
